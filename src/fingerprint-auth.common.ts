@@ -1,5 +1,4 @@
-export enum ERROR_CODES {
-  BIOMETRY_LOCKOUT = -8,
+export const enum ERROR_CODES {
   PASSWORD_FALLBACK_SELECTED = -3, // historically this is what iOS uses, so using that as well
   DEVELOPER_ERROR = 10,
   NOT_AVAILABLE = 20,
@@ -57,10 +56,15 @@ export interface VerifyFingerprintWithCustomFallbackOptions {
   authenticationValidityDuration?: number;
 }
 
+interface InfoAvailability {
+  supported: boolean;
+  configured: boolean;
+}
+
 export interface BiometricIDAvailableResult {
   any: boolean;
-  touch?: boolean;
-  face?: boolean;
+  touch?: InfoAvailability;
+  face?: InfoAvailability;
 }
 
 //noinspection JSUnusedGlobalSymbols

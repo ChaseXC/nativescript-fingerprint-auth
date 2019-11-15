@@ -15,41 +15,35 @@ export class FingerprintAuth implements FingerprintAuthApi {
 
   available(): Promise<BiometricIDAvailableResult> {
     return new Promise((resolve, reject) => {
+      /* Describing laContext.biometryType:
+         This property is set only after you call the
+         canEvaluatePolicy(_:error:) method, and is set no matter what the call returns.
+         The default value is LABiometryType.none.
+      */
+      const laContext = LAContext.new();
+      let biometryConfigured = true;
       try {
-        const laContext = LAContext.new();
-        const hasBio = laContext.canEvaluatePolicyError(LAPolicy.DeviceOwnerAuthenticationWithBiometrics);
-
-        resolve({
-          any: hasBio,
-          touch: hasBio && laContext.biometryType === 1, // LABiometryType.TypeTouchID,
-          face: hasBio && laContext.biometryType === 2 // LABiometryType.TypeFaceID,
-        });
+        biometryConfigured = laContext.canEvaluatePolicyError(LAPolicy.DeviceOwnerAuthenticationWithBiometrics);
       } catch (ex) {
-        if (ex.error != null && ex.error.code != null) {
-          if (ex.error.code === LAError.BiometryLockout) {
-            reject({
-              code: ERROR_CODES.BIOMETRY_LOCKOUT,
-              message: "Biometric lockout.",
-            });
-            return;
-          } else if (ex.error.code === LAError.BiometryNotEnrolled) {
-            reject({
-              code: ERROR_CODES.NOT_CONFIGURED,
-              message: "No biometric authentication has been configured.",
-            });
-            return;
-          } else if (ex.error.code === LAError.BiometryNotAvailable) {
-            resolve({
-              any: false
-            });
-            return;
-          }
+        // LAError.BiometryNotEnrolled
+        if (ex.error != null && ex.error.code != null && ex.error.code === -7) {
+          biometryConfigured = false;
         }
-        reject({
-          code: ERROR_CODES.UNEXPECTED_ERROR,
-          message: "Unexpected error",
-        });
         console.log(`fingerprint-auth.available: ${ex}`);
+      } finally {
+        const hasTouch = laContext.biometryType === 1; // LABiometryType.TypeTouchID,
+        const hasFace = laContext.biometryType === 2; // LABiometryType.TypeFaceID,
+        resolve({
+          any: hasFace || hasTouch,
+          touch: {
+            supported: hasTouch,
+            configured: hasTouch && biometryConfigured
+          },
+          face: {
+            supported: hasFace,
+            configured: hasFace && biometryConfigured
+          }
+        });
       }
     });
   }
@@ -154,6 +148,7 @@ export class FingerprintAuth implements FingerprintAuthApi {
     return new Promise((resolve, reject) => {
       try {
         this.laContext = LAContext.new();
+        try {
         if (!this.laContext.canEvaluatePolicyError(LAPolicy.DeviceOwnerAuthenticationWithBiometrics)) {
           reject({
             code: ERROR_CODES.NOT_AVAILABLE,
@@ -161,6 +156,26 @@ export class FingerprintAuth implements FingerprintAuthApi {
           });
           return;
         }
+      } catch (ex) {
+        if (ex.error != null && ex.error.code != null) {
+          if (ex.error.code === -8) {
+            // Need to use LAPolicy.DeviceOwnerAuthentication in this case
+            usePasscodeFallback = true;
+          } else if (ex.error.code === -7) {
+            reject({
+              code: ERROR_CODES.NOT_CONFIGURED,
+              message: "No biometric authentication has been configured.",
+            });
+            return;
+          } else if (ex.error.code === -6) {
+            reject({
+              code: ERROR_CODES.NOT_AVAILABLE,
+              message: "Biometry not available. Call 'available' first.",
+            });
+            return;
+          }
+        }
+      }
 
         const message = (options !== null && options.message) || "Scan your finger";
         if (options !== null && options.fallbackMessage) {

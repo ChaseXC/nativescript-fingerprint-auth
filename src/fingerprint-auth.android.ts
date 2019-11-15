@@ -49,28 +49,15 @@ export class FingerprintAuth implements FingerprintAuthApi {
           resolve({
             any: false
           });
-        } else if (!fingerprintManager.hasEnrolledFingerprints()) {
-          // If the user has not enrolled any fingerprints, they still might have the device secure so we can fallback
-          // to present the user with the swipe, password, pin device security screen regardless
-          // the developer can handle this resolve by checking the `touch` property and determine if they want to use the
-          // verifyFingerprint method or not since they'll know the user has no finger prints enrolled but do have a security option enabled
-          // https://developer.android.com/reference/android/app/KeyguardManager.html#isDeviceSecure() only 23+
-          if (this.keyguardManager.isDeviceSecure()) {
-            resolve({
-              any: true,
-              touch: false
-            });
-          } else {
-            // User hasn't enrolled any fingerprints to authenticate with
-            reject({
-              code: ERROR_CODES.NOT_CONFIGURED,
-              message: `User hasn't enrolled any fingerprints to authenticate with`
-            });
-          }
         } else {
+          // If we get here, we know the user has fingerprint hardware
+          const configured = fingerprintManager.hasEnrolledFingerprints();
           resolve({
             any: true,
-            touch: true
+            touch: {
+              supported: true,
+              configured: configured
+            }
           });
         }
       } catch (ex) {
