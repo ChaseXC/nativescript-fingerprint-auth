@@ -1,6 +1,5 @@
-import * as app from "tns-core-modules/application";
-import { AndroidActivityResultEventData } from "tns-core-modules/application";
-import { ad as androidUtils } from "tns-core-modules/utils/utils";
+import { Application as app, AndroidApplication, AndroidActivityResultEventData } from '@nativescript/core';
+import { ad as androidUtils } from '@nativescript/core/utils';
 import { BiometricIDAvailableResult, ERROR_CODES, FingerprintAuthApi, VerifyFingerprintOptions, VerifyFingerprintWithCustomFallbackOptions } from "./fingerprint-auth.common";
 
 declare const com: any;
@@ -174,13 +173,13 @@ export class FingerprintAuth implements FingerprintAuthApi {
               }
             }
             app.android.off(
-                app.AndroidApplication.activityResultEvent,
+                AndroidApplication.activityResultEvent,
                 onActivityResult
             );
           };
 
           app.android.on(
-              app.AndroidApplication.activityResultEvent,
+              AndroidApplication.activityResultEvent,
               onActivityResult
           );
 

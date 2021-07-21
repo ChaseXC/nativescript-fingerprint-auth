@@ -1,4 +1,4 @@
-import { ios as iOSUtils } from "tns-core-modules/utils/utils";
+import { iOSNativeHelper as iOSUtils } from '@nativescript/core/utils';
 import {
   BiometricIDAvailableResult,
   FingerprintAuthApi,
